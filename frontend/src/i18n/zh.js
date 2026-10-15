@@ -69,6 +69,7 @@ export default {
     vsType: '类型',
     vsSimple: '内置纯 Python 向量库（无本地推理依赖）',
     vsChroma: 'Chroma Server（HTTP 远程）',
+    vsHint: '内置向量库适合小型、单机项目；较大的项目或多人使用时，建议使用独立的 Chroma Server。',
     cacheLimit: '内存缓存条数上限',
     tenant: 'Tenant',
     database: 'Database',

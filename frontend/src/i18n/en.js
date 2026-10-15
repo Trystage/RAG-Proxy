@@ -69,6 +69,7 @@ export default {
     vsType: 'Type',
     vsSimple: 'Built-in pure-Python store (no local inference)',
     vsChroma: 'Chroma Server (remote HTTP)',
+    vsHint: 'The built-in store is suitable for small, single-machine projects. Use a standalone Chroma Server for larger or shared projects.',
     cacheLimit: 'In-memory cache limit',
     tenant: 'Tenant',
     database: 'Database',

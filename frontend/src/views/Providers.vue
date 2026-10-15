@@ -46,6 +46,7 @@
               <el-option :label="tr('providers.vsChroma')" value="chroma_http" />
             </el-select>
           </el-form-item>
+          <el-alert :title="tr('providers.vsHint')" type="info" :closable="false" show-icon style="margin-bottom: 16px" />
           <template v-if="vsForm.type === 'simple'">
             <el-form-item :label="tr('providers.cacheLimit')">
               <el-input-number v-model="vsForm.simple.cache_limit" :min="1000" :step="10000" />
