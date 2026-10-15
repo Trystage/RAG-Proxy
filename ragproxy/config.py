@@ -187,17 +187,28 @@ class ConfigManager:
 
     # ---------- 写回（Web UI 修改配置）----------
     def update_yaml(self, content: str) -> None:
-        """校验 YAML 后原子写回配置文件。"""
+        """校验 YAML，补齐缺失 section 后原子写回配置文件。"""
         parsed = yaml.safe_load(content)
         if parsed is None:
             parsed = {}
         if not isinstance(parsed, dict):
             raise ValueError("配置文件必须是 YAML 映射（顶层键值对）")
-        # 写回
+
+        with open(DEFAULTS_DIR / DEFAULT_CONFIG_NAME, "r", encoding="utf-8") as f:
+            defaults = yaml.safe_load(f) or {}
+        existing = {}
+        if self.settings.config_path.exists():
+            with open(self.settings.config_path, "r", encoding="utf-8") as f:
+                existing = yaml.safe_load(f) or {}
+        if not isinstance(existing, dict):
+            existing = {}
+        merged = _deep_merge(defaults, existing)
+        merged = _deep_merge(merged, parsed)
+
         tmp = self.settings.config_path.with_suffix(".yaml.tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             yaml.safe_dump(
-                parsed, f, allow_unicode=True, sort_keys=False, default_flow_style=False
+                merged, f, allow_unicode=True, sort_keys=False, default_flow_style=False
             )
         tmp.replace(self.settings.config_path)
         self.load(force=True)
