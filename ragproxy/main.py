@@ -39,12 +39,12 @@ def create_app(settings: AppSettings) -> FastAPI:
         app.state.app = state
         # 首次启动输出面板登录密钥（环境变量未设置时自动生成并落盘）
         log.info(
-            "RAG Proxy 已启动 | 数据目录：%s | 配置文件：%s",
+            "RAG Proxy started | Data directory: %s | Config file: %s",
             settings.data_dir,
             settings.config_path,
         )
         log.info(
-            "管理面板登录密钥：%s（也可通过环境变量 RAGPROXY_SECRET_KEY 设置）",
+            "Management panel login key: %s (can also be set via environment variable RAGPROXY_SECRET_KEY)",
             state.secret_key,
         )
         yield
