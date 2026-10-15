@@ -1,0 +1,11 @@
+.git
+.gitignore
+data
+tests/.data
+tests/*.log
+static
+frontend/node_modules
+frontend/dist
+**/__pycache__
+**/*.pyc
+*.log

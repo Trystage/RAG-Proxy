@@ -1,0 +1,13 @@
+# 运行数据（向量库/文档/缓存/日志/配置），备份即打包该目录
+data/
+# 前端构建产物（由 npm run build 生成）
+static/
+frontend/node_modules/
+frontend/dist/
+**/__pycache__/
+**/*.pyc
+*.log
+tests/.data/
+.DS_Store
+/.idea
+/tests

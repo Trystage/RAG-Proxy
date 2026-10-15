@@ -1,0 +1,22 @@
+services:
+  rag-proxy:
+    build: .
+    image: rag-proxy:latest
+    container_name: rag-proxy
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./data:/data
+    environment:
+      - RAGPROXY_DATA_DIR=/data
+      - RAGPROXY_PORT=8100
+      - RAGPROXY_LOG_LEVEL=INFO
+      - TZ=Asia/Shanghai
+      # - RAGPROXY_SECRET_KEY=请设置你的面板密钥  # 不设置则首次启动自动生成并写入 /data/config/secret_key.yaml
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -1,0 +1,121 @@
+# ============================================================
+# RAG Proxy 默认业务配置
+# 首次启动时若 <DATA_DIR>/config/config.yaml 不存在，将本文件拷贝过去。
+# 全部业务配置（Provider / 知识库 / 模型映射 / 注入模板）都在这里，
+# 修改后 Web UI 或 API 热重载，无需重启容器。
+# ============================================================
+
+# 下游 API 可选 key 校验：留空数组则下游 API 不校验；
+# 非空时下游请求必须携带 Authorization: Bearer <key>
+api_keys: []
+
+# ---------- LLM Provider（即文档中的 upstreams）----------
+# type: openai | anthropic
+upstreams:
+  - id: "deepseek"
+    type: "openai"
+    base_url: "https://api.deepseek.com"
+    api_key: "sk-xxx"
+    timeout: 120
+
+  - id: "anthropic"
+    type: "anthropic"
+    base_url: "https://api.anthropic.com"
+    api_key: "sk-ant-xxx"
+    timeout: 120
+
+# ---------- Embedding Provider ----------
+# type: openai（OpenAI 兼容 /embeddings 接口）
+embeddings:
+  - id: "default-embed"
+    type: "openai"
+    base_url: "http://127.0.0.1:8080/v1"
+    api_key: "sk-xxx"
+    model: "text-embedding-3-small"
+    dimensions: 1536
+    timeout: 60
+
+# ---------- ReRanker Provider ----------
+# type: openai（OpenAI 兼容 /rerank）| cohere | jina
+rerankers:
+  - id: "default-rerank"
+    type: "openai"
+    base_url: "http://127.0.0.1:8080/v1"
+    api_key: "sk-xxx"
+    model: "rerank"
+    timeout: 60
+
+# ---------- Vector Store ----------
+# type: simple      内置纯 Python 向量存储（numpy 余弦相似度 + 磁盘持久化），
+#                   无任何本地模型推理依赖，默认使用
+# type: chroma_http 连接独立部署的 Chroma Server
+vectorstore:
+  type: "simple"
+  simple:
+    # 每知识库最大向量条数内存驻留阈值（超出则按需加载）
+    cache_limit: 200000
+  chroma_http:
+    base_url: "http://127.0.0.1:8000"
+    tenant: "default_tenant"
+    database: "default_database"
+    collection_prefix: "ragproxy_"
+
+# ---------- 模型名 → 知识库映射 ----------
+# kb: null 表示不检索，直接转发上游
+# kb_merge: priority | concat | rrf
+# inject_mode: system_prepend | system_append | new_message
+# rerank: true 时启用重排序
+models:
+  - name: "deepseek"
+    kb: ["default-kb"]
+    kb_merge: "priority"
+    upstream: "deepseek"
+    inject_mode: "system_prepend"
+
+# ---------- RAG 检索与注入 ----------
+rag:
+  # 注入模板：{context} 与 {query} 会被替换
+  inject_template: |
+    以下是与用户内容相关的参考资料，请结合这些资料回答：
+
+    {context}
+
+    ---
+    用户内容：{query}
+  max_context_tokens: 2000
+  top_k: 5
+  # score_threshold: 0 表示不过滤，返回 top_k 条结果（推荐）；调高会过滤低分结果
+  score_threshold: 0.0
+  rerank_top_k: 10        # 重排序前先取出的候选条数
+  query_source: "last_user"   # last_user | last_message | all_user
+  embed_provider: "default-embed"
+  rerank_provider: "default-rerank"
+
+# ---------- 分块 ----------
+# strategy: token | paragraph | heading
+chunking:
+  strategy: "token"
+  chunk_size: 800
+  chunk_overlap: 100
+
+# ---------- 上传限制 ----------
+upload:
+  max_file_size_mb: 100        # 单文件上限（默认不低于 10 MB）
+  max_files_per_batch: 500     # 单次批量文件数（默认不低于 100）
+  max_batch_size_mb: 2048      # 单次批量总大小（默认不低于 1 GB）
+  max_extract_size_mb: 4096    # 解压后总大小上限（防 zip bomb）
+  max_embed_concurrency: 4     # embedding 并发上限
+  max_upload_concurrency: 4    # 上传任务并发上限
+  allowed_extensions: [".md", ".markdown", ".txt", ".pdf", ".html", ".htm", ".docx", ".doc"]
+  archive_extensions: [".zip", ".tar.gz", ".tgz", ".tar"]
+
+# ---------- 安全 ----------
+security:
+  session_ttl_hours: 24
+  log_query: false             # 默认不记录完整 query，置 true 或日志级别 DEBUG 时才记
+  log_response: false
+
+# ---------- 请求日志 ----------
+logging:
+  request_log_db: "logs/requests.db"
+  keep_days: 90
