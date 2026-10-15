@@ -52,7 +52,7 @@ async def create_mapping(request: Request, body: MappingBody):
     if find_index(items, "name", item["name"]) >= 0:
         raise HTTPException(status_code=400, detail=translate("model_exists", locale_from_request(request), name=item["name"]))
     items.append(item)
-    save_section(state, "models", items)
+    save_section(request, state, "models", items)
     return {"ok": True, "item": item}
 
 
@@ -70,7 +70,7 @@ async def update_mapping(request: Request, model_name: str, body: MappingBody):
         raise HTTPException(status_code=400, detail=translate("immutable_model", locale_from_request(request)))
     item["name"] = model_name
     items[idx] = item
-    save_section(state, "models", items)
+    save_section(request, state, "models", items)
     return {"ok": True, "item": item}
 
 
@@ -83,5 +83,5 @@ async def delete_mapping(request: Request, model_name: str):
     if idx < 0:
         raise HTTPException(status_code=404, detail=translate("mapping_not_found", locale_from_request(request)))
     items.pop(idx)
-    save_section(state, "models", items)
+    save_section(request, state, "models", items)
     return {"ok": True}

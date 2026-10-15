@@ -65,7 +65,7 @@ async def create_provider(request: Request, kind: str, body: ProviderBody):
     if is_masked(item.get("api_key")):
         raise HTTPException(status_code=400, detail=translate("masked_key_input", locale_from_request(request)))
     items.append(item)
-    save_section(state, sec, items)
+    save_section(request, state, sec, items)
     return {"ok": True, "item": item}
 
 
@@ -102,7 +102,7 @@ async def update_provider(request: Request, kind: str, provider_id: str, body: P
             )
         item["api_key"] = old_key
     items[idx] = item
-    save_section(state, sec, items)
+    save_section(request, state, sec, items)
     return {"ok": True, "item": item}
 
 
@@ -116,7 +116,7 @@ async def delete_provider(request: Request, kind: str, provider_id: str):
     if idx < 0:
         raise HTTPException(status_code=404, detail=translate("provider_not_found", locale_from_request(request)))
     items.pop(idx)
-    save_section(state, sec, items)
+    save_section(request, state, sec, items)
     return {"ok": True}
 
 
@@ -173,5 +173,5 @@ async def update_vectorstore(request: Request, body: ProviderBody):
     cfg["vectorstore"] = body.item
     from .admin_common import write_config
 
-    write_config(state, cfg)
+    write_config(request, state, cfg)
     return {"ok": True, "item": body.item}

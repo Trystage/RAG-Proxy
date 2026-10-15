@@ -25,7 +25,7 @@ def get_state(request: Request) -> AppState:
     return request.app.state.app  # type: ignore[attr-defined]
 
 
-def write_config(state: AppState, cfg: dict[str, Any]) -> None:
+def write_config(request: Request, state: AppState, cfg: dict[str, Any]) -> None:
     """写回配置并热重载。"""
     cfg.pop("_mtime", None)
     # 防御：配置中不允许出现脱敏占位（**** / sk-****xxx），防止污染写回磁盘
@@ -49,10 +49,10 @@ def write_config(state: AppState, cfg: dict[str, Any]) -> None:
     state.reload()
 
 
-def save_section(state: AppState, section: str, items: list[dict[str, Any]]) -> None:
+def save_section(request: Request, state: AppState, section: str, items: list[dict[str, Any]]) -> None:
     cfg = state.config.raw()
     cfg[section] = items
-    write_config(state, cfg)
+    write_config(request, state, cfg)
 
 
 def find_index(items: list[dict], key: str, value: str) -> int:

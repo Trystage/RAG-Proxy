@@ -38,7 +38,7 @@ async def get_settings_raw(request: Request):
     return {"content": text}
 
 
-def _restore_secrets(state, old: dict, new: dict) -> None:
+def _restore_secrets(request: Request, state, old: dict, new: dict) -> None:
     """api_key 为脱敏占位（**** / sk-****xxx）或缺失时，保留旧密钥；旧密钥已损坏时强制要求新值。"""
     for section in ("upstreams", "embeddings", "rerankers"):
         old_items = {i.get("id"): i for i in (old.get(section) or [])}
@@ -81,7 +81,7 @@ async def update_settings(request: Request, body: SettingsBody):
         raise HTTPException(status_code=400, detail=translate("yaml_invalid", locale_from_request(request), error=e))
     if not isinstance(parsed, dict):
         raise HTTPException(status_code=400, detail=translate("config_mapping", locale_from_request(request)))
-    _restore_secrets(state, state.config.raw(), parsed)
+    _restore_secrets(request, state, state.config.raw(), parsed)
     try:
         state.config.update_yaml(yaml.safe_dump(parsed, allow_unicode=True, sort_keys=False, default_flow_style=False))
     except Exception as e:  # noqa: BLE001

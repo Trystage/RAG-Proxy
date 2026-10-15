@@ -39,14 +39,14 @@ def _kb_provider_cfg(state, name: str) -> str | None:
     return None
 
 
-def _set_kb_provider_cfg(state, name: str, provider_id: str | None) -> None:
+def _set_kb_provider_cfg(request: Request, state, name: str, provider_id: str | None) -> None:
     cfg = state.config.raw()
     kbs = cfg.get("knowledge_bases", []) or []
     kbs = [k for k in kbs if not (isinstance(k, dict) and k.get("name") == name)]
     if provider_id:
         kbs.append({"name": name, "embed_provider": provider_id})
     cfg["knowledge_bases"] = kbs
-    write_config(state, cfg)  # 写回 + 热重载
+    write_config(request, state, cfg)  # 写回 + 热重载
 
 
 def _check_ext(ext: str, allowed: list[str]) -> bool:
@@ -87,7 +87,7 @@ async def create_kb(request: Request, body: CreateKbBody):
     if body.embed_provider:
         if body.embed_provider not in state.embeds:
             raise HTTPException(status_code=400, detail=translate("embedding_not_found", locale_from_request(request), provider=body.embed_provider))
-        _set_kb_provider_cfg(state, name, body.embed_provider)
+        _set_kb_provider_cfg(request, state, name, body.embed_provider)
     return {"ok": True, "name": name}
 
 
@@ -105,7 +105,7 @@ async def set_kb_provider(request: Request, name: str, body: SetKbProviderBody):
         raise HTTPException(status_code=400, detail=translate("embedding_not_found", locale_from_request(request), provider=body.embed_provider))
     old_pid = _kb_provider_cfg(state, name)
     old_dim = await state.vs.dim(name) if state.vs else 0
-    _set_kb_provider_cfg(state, name, body.embed_provider)
+    _set_kb_provider_cfg(request, state, name, body.embed_provider)
     # 维度变化检测：目标 provider 的维度与知识库已索引维度不同 → 需要重建索引
     need_reindex = False
     target_dim = 0
@@ -139,7 +139,7 @@ async def delete_kb(request: Request, name: str):
     doc_dir = state.ingest.kb_doc_dir(name)
     if doc_dir.exists():
         shutil.rmtree(doc_dir, ignore_errors=True)
-    _set_kb_provider_cfg(state, name, None)  # 移除 knowledge_bases 配置条目
+    _set_kb_provider_cfg(request, state, name, None)  # 移除 knowledge_bases 配置条目
     return {"ok": True}
 
 
@@ -198,7 +198,7 @@ async def task_status(request: Request, name: str, task_id: str):
 
 # ---------- 上传 ----------
 async def _save_uploaded(
-    state, kb: str, files: list[UploadFile]
+    request: Request, state, kb: str, files: list[UploadFile]
 ) -> tuple[list[dict], list[dict], int]:
     """保存上传文件，返回 (已保存记录, 拒绝记录, 总字节)。"""
     cfg = state.config.raw().get("upload", {}) or {}
@@ -325,7 +325,7 @@ async def upload_files(
     # 上传并发限制：保护文件保存阶段，防止并发大文件上传打满资源
     sem = state.upload_sem or asyncio.Semaphore(4)
     async with sem:
-        saved, rejected, _ = await _save_uploaded(state, name, files)
+        saved, rejected, _ = await _save_uploaded(request, state, name, files)
     if not saved:
         return JSONResponse(
             status_code=400,
