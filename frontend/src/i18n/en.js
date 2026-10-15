@@ -188,7 +188,7 @@ export default {
     totalCost: 'Total time'
   },
   apiKeys: {
-    title: 'API Key Management', enabled: 'Enable API key authentication', add: 'Create API Key', name: 'Name', namePlaceholder: 'e.g. Cursor, Claude Code', key: 'Key', preview: 'Key preview', expires: 'Expires', models: 'Allowed models', modelsPlaceholder: 'Comma-separated; empty means unrestricted', created: 'Created', never: 'Never', enabledTag: 'Enabled', disabledTag: 'Disabled', edit: 'Edit API Key', save: 'Save', createdMessage: 'API key created. Copy the full key now.', copy: 'Copy', copied: 'Copied', deleteConfirm: 'Delete API key "{name}"?', saved: 'Saved', deleted: 'Deleted', empty: 'No API keys', invalidExpiry: 'Invalid expiry time', fullKeyHint: 'The full key is shown only once after creation.'
+    title: 'API Key Management', enabled: 'Enable API key authentication', add: 'Create API Key', name: 'Name', namePlaceholder: 'e.g. Cursor, Claude Code', key: 'Key', preview: 'Key preview', expires: 'Expires', models: 'Allowed models', modelsPlaceholder: 'Select models; empty means unrestricted', modelsSelectPlaceholder: 'Select models, or allow all models', allModels: 'All models (*)', created: 'Created', never: 'Never', enabledTag: 'Enabled', disabledTag: 'Disabled', edit: 'Edit API Key', save: 'Save', createdMessage: 'API key created. Copy the full key now.', copy: 'Copy', copied: 'Copied', deleteConfirm: 'Delete API key "{name}"?', saved: 'Saved', deleted: 'Deleted', empty: 'No API keys', invalidExpiry: 'Invalid expiry time', fullKeyHint: 'The full key is shown only once after creation.'
   },
   settings: {
     title: 'Config file (config.yaml)',

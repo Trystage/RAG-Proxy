@@ -114,6 +114,16 @@ async def get_api_settings(request: Request):
     }
 
 
+@router.get("/admin/api/models")
+async def get_api_models(request: Request):
+    require_admin(request)
+    state = get_state(request)
+    models = state.config.get("models", []) or []
+    return {
+        "models": sorted({str(item.get("name")) for item in models if isinstance(item, dict) and item.get("name")}),
+    }
+
+
 @router.put("/admin/api")
 async def update_api_settings(request: Request, body: ApiAuthBody):
     require_admin(request)

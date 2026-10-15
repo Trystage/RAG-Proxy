@@ -30,6 +30,7 @@ export function errMsg(e) {
 }
 
 export function getApiSettings() { return http.get('/admin/api') }
+export function getApiModels() { return http.get('/admin/api/models') }
 export function updateApiSettings(enabled) { return http.put('/admin/api', { enabled }) }
 export function createApiKey(payload) { return http.post('/admin/api/keys', payload) }
 export function updateApiKey(id, payload) { return http.put(`/admin/api/keys/${id}`, payload) }

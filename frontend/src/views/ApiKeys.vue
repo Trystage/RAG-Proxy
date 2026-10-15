@@ -45,7 +45,10 @@
           <el-date-picker v-model="form.expires_at" type="datetime" value-format="YYYY-MM-DDTHH:mm:ssZ" clearable style="width: 100%" />
         </el-form-item>
         <el-form-item :label="t('apiKeys.models')">
-          <el-input v-model="form.models" :placeholder="t('apiKeys.modelsPlaceholder')" />
+          <el-select v-model="form.models" multiple clearable :placeholder="t('apiKeys.modelsSelectPlaceholder')" style="width: 100%">
+            <el-option value="*" :label="t('apiKeys.allModels')" />
+            <el-option v-for="model in modelOptions" :key="model" :value="model" :label="model" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -70,23 +73,28 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { createApiKey, deleteApiKey, errMsg, getApiSettings, updateApiKey, updateApiSettings } from '../api'
+import { createApiKey, deleteApiKey, errMsg, getApiModels, getApiSettings, updateApiKey, updateApiSettings } from '../api'
 
 const { t } = useI18n()
 const enabled = ref(true)
 const items = ref([])
+const modelOptions = ref([])
 const editDialog = ref(false)
 const createdDialog = ref(false)
 const createdKey = ref('')
 const editing = ref(null)
 const saving = ref(false)
-const form = reactive({ name: '', expires_at: '', models: '' })
+const form = reactive({ name: '', expires_at: '', models: [] })
 
 async function load() {
   try {
-    const { data } = await getApiSettings()
+    const [{ data }, { data: modelData }] = await Promise.all([getApiSettings(), getApiModels()])
     enabled.value = data.enabled
     items.value = data.keys || []
+    modelOptions.value = [...new Set([
+      ...(modelData.models || []),
+      ...items.value.flatMap((item) => item.allowed_models || []).filter((model) => model !== '*')
+    ])].sort()
   } catch (e) { ElMessage.error(errMsg(e)) }
 }
 
@@ -101,7 +109,7 @@ async function toggleAuth(value) {
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { name: '', expires_at: '', models: '' })
+  Object.assign(form, { name: '', expires_at: '', models: [] })
   editDialog.value = true
 }
 
@@ -110,16 +118,17 @@ function openEdit(row) {
   Object.assign(form, {
     name: row.name || '',
     expires_at: row.expires_at || '',
-    models: (row.allowed_models || []).join(', ')
+    models: [...(row.allowed_models || [])]
   })
   editDialog.value = true
 }
 
 function payload() {
+  const models = form.models.includes('*') ? ['*'] : [...new Set(form.models)]
   return {
     name: form.name,
     expires_at: form.expires_at || null,
-    allowed_models: form.models.split(',').map((value) => value.trim()).filter(Boolean)
+    allowed_models: models
   }
 }
 

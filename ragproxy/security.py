@@ -74,6 +74,8 @@ def _key_is_valid(key_config: KeyConfig, candidate: str, model: str | None) -> b
             return False
 
     allowed_models = key_config.get("allowed_models") or []
+    if "*" in allowed_models:
+        return True
     if allowed_models and (not model or model not in allowed_models):
         return False
     return True
