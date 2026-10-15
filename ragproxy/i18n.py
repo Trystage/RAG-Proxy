@@ -100,6 +100,8 @@ _MESSAGES["ru"] = {
     "config_reloaded": "Конфигурация перезагружена",
     "test_success": "Подключение успешно{details}",
     "test_failure": "Ошибка подключения: {error}",
+    "api_key_not_found": "API-ключ не найден",
+    "api_key_created": "Скопируйте этот API-ключ сейчас. Позже полный ключ больше не будет показан.",
 }
 _MESSAGES["es"] = {
     "invalid_secret": "Secreto no válido",
@@ -141,6 +143,8 @@ _MESSAGES["es"] = {
     "config_reloaded": "Configuración recargada",
     "test_success": "Conexión correcta{details}",
     "test_failure": "Error de conexión: {error}",
+    "api_key_not_found": "Clave API no encontrada",
+    "api_key_created": "Copie esta clave API ahora. Después no se volverá a mostrar completa.",
 }
 _MESSAGES["pt"] = {
     "invalid_secret": "Segredo inválido",
@@ -182,6 +186,8 @@ _MESSAGES["pt"] = {
     "config_reloaded": "Configuração recarregada",
     "test_success": "Ligação bem-sucedida{details}",
     "test_failure": "Falha na ligação: {error}",
+    "api_key_not_found": "Chave API não encontrada",
+    "api_key_created": "Copie esta chave API agora. Ela não será mostrada novamente por completo.",
 }
 
 

@@ -118,6 +118,22 @@ Priority: **CLI args > env vars > config file > defaults**
 
 All business settings live in `config.yaml`. Changes saved via Web UI trigger **hot-reload** — no container restart needed.
 
+### Choosing a Vector Store
+
+The built-in `simple` store is light and needs no extra service, so it is a good choice for a small project on one machine. For a large project or several users, run Chroma separately and use its HTTP API:
+
+```yaml
+vectorstore:
+  type: "chroma_http"
+  chroma_http:
+    base_url: "http://chroma:8000"
+    tenant: "default_tenant"
+    database: "default_database"
+    collection_prefix: "ragproxy_"
+```
+
+The proxy does not start Chroma for you. Keep the Chroma Server data and backups separate from the proxy data.
+
 ### Model → Knowledge Base Mapping
 
 ```yaml

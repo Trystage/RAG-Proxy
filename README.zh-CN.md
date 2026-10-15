@@ -115,6 +115,22 @@ python -m ragproxy --data-dir /var/lib/ragproxy --port 8100
 
 所有业务配置集中在 `config.yaml`。通过 Web UI 保存后**热重载**，无需重启容器。
 
+### 如何选择向量库
+
+内置 `simple` 向量库比较轻，不需要额外服务，适合单机小项目。项目较大或多人使用时，可以单独运行 Chroma，再通过 HTTP 使用它：
+
+```yaml
+vectorstore:
+  type: "chroma_http"
+  chroma_http:
+    base_url: "http://chroma:8000"
+    tenant: "default_tenant"
+    database: "default_database"
+    collection_prefix: "ragproxy_"
+```
+
+Proxy 不会自动启动 Chroma。Chroma 的数据和备份请与 Proxy 的数据分开保存。
+
 ### 模型名 → 知识库映射
 
 ```yaml
