@@ -26,6 +26,16 @@ This add-on can dramatically multiply an AI model's expertise in a specific doma
 
 ---
 
+## Before and After
+
+The same question, with and without a domain-specific knowledge base:
+
+| Without RAG | With RAG |
+|-------------|----------|
+| ![Before RAG (English)](docs/images/before-rag-en.png) | ![After RAG (English)](docs/images/after-rag-en.png) |
+
+---
+
 ## Tech Stack
 
 | Layer | Choice |
