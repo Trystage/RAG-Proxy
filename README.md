@@ -1,5 +1,7 @@
 # RAG Proxy
 
+Nowadays, every client seems to embed its own RAG. When multiple clients are enabled at the same time, they cannot share a single knowledge base at all. Even worse, RAG integrations are all over the place: every vendor has its own knowledge base, and some tools use MCP directly. So why not put a Proxy in front of the AI? This makes it easier for coding tools to read Maven documentation and helps chat agents learn specialized knowledge, such as the latest memes and slang, instead of relying only on their built-in parameters. That is why I built this project.
+
 <p align="center">
   <a href="README.md">English</a> | <a href="README.zh-CN.md">中文</a>
 </p>
@@ -40,6 +42,18 @@ This add-on can dramatically multiply an AI model's expertise in a specific doma
 ## Quick Start
 
 ### Docker
+
+#### Install from the command line
+
+```bash
+docker pull ghcr.io/trystage/rag-proxy:latest
+```
+
+```bash
+docker run -d -p 8100:8100 -v ./data:/data ghcr.io/trystage/rag-proxy:latest
+```
+
+#### Build locally
 
 ```bash
 docker compose up -d --build

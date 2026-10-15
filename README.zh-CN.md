@@ -1,5 +1,7 @@
 # RAG Proxy
 
+现在每个客户端都喜欢内嵌自己的 RAG，同时开启多个客户端时，它们根本没法共用同一个知识库。更麻烦的是，RAG 的接入方式五花八门，每家都有自己的知识库，甚至还有直接使用 MCP 的。那我们为什么不能在访问 AI 之前加一层 Proxy？这样一来，写代码的工具可以更方便地读取 Maven 文档，聊天 Agent 也能更好地学习各种专项知识，例如随时了解最新的梗和 slang，而不是只依赖模型自身的参数来回答问题。因此，我搬出了这个项目。
+
 <p align="center">
   <a href="README.md">English</a> | <a href="README.zh-CN.md">中文</a>
 </p>
@@ -15,12 +17,12 @@
 ## 功能特性
 
 - **模型名路由** — 为模型名绑定知识库，下游客户端只需替换 `model` 字段即可。无需改代码、无需加 header。
-- **多知识库合并策略** — `priority`、`concat`、`rrf`（倒数排名融合）三种方式合并多个知识库的检索结果。
-- **零本地推理** — 内置纯 Python 向量库（numpy 余弦 + JSONL/npy）；大规模场景可切换 Chroma Server（HTTP）。
-- **Web 管理面板** — Provider 管理、知识库管理、模型映射、请求日志、统计面板，一站搞定。
-- **OpenAI & Anthropic 双协议兼容** — `POST /v1/chat/completions` 和 `POST /v1/messages`，均支持 SSE 流式。
-- **优雅降级** — 检索/向量库/Embedding 故障时自动降级为透传，不阻断对话。
-- **Docker / 裸机双模式** — 多阶段 Docker 构建或直接 `python -m ragproxy`。
+- **多知识库合并策略** — `priority`、`concat` 或 RRF（倒数排名融合）三种方式合并多个知识库的检索结果。
+- **零本地推理** — 内置纯 Python 向量库（numpy 余弦 + JSONL/npy）；可选 Chroma Server（HTTP）用于大规模部署。
+- **Web 管理面板** — 管理 Provider、知识库、模型映射，查看请求日志和分析。
+- **OpenAI & Anthropic 兼容** — 支持 `POST /v1/chat/completions` 和 `POST /v1/messages`，SSE 流式传输。
+- **优雅降级** — 检索失败自动降级为透传，不会中断对话。
+- **Docker 或裸机** — 多阶段 Docker 构建或 `python -m ragproxy`。
 
 ---
 
@@ -30,7 +32,7 @@
 |---|---|
 | 后端 | Python 3.11+ / FastAPI / Uvicorn |
 | 前端 | Vue 3 + Vite + Element Plus（编译到 `static/`，由 FastAPI 托管） |
-| 向量存储 | 内置纯 Python 向量库（numpy 余弦 + JSONL/npy）；可选 Chroma Server（HTTP） |
+| 向量存储 | 内置纯 Python 向量库（numpy 余弦 + JSONL/npy）；可选 Chroma Server（HTTP）用于大规模部署 |
 | 部署 | Docker（多阶段构建）或裸机 `python -m ragproxy` |
 
 > **为什么不用嵌入式 Chroma？** `chromadb` 将 `onnxruntime` 作为硬依赖（其内置 embedding 使用 ONNX 模型），与"零本地推理"约束冲突。因此默认实现为内置纯 Python 向量库，并预留 `chroma_http` 后端连接独立部署的 Chroma Server。
@@ -40,6 +42,15 @@
 ## 快速开始
 
 ### Docker 模式
+
+#### 从命令行安装
+
+```bash
+docker pull ghcr.io/trystage/rag-proxy:latest
+docker run -d -p 8100:8100 -v ./data:/data ghcr.io/trystage/rag-proxy:latest
+```
+
+#### 本地构建
 
 ```bash
 docker compose up -d --build
