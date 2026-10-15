@@ -30,6 +30,7 @@ export default {
     mappings: '模型映射',
     logs: '请求日志',
     settings: '设置',
+    apiKeys: 'API Keys',
     logout: '退出登录'
   },
   login: {
@@ -185,6 +186,9 @@ export default {
     hitDocs: '命中文档',
     retrieveCost: '检索耗时',
     totalCost: '总耗时'
+  },
+  apiKeys: {
+    title: 'API Keys 管理', enabled: '启用 API Key 校验', add: '新建 API Key', name: '名称', namePlaceholder: '例如 Cursor、Claude Code', key: 'Key', preview: 'Key 预览', expires: '失效时间', models: '允许的模型', modelsPlaceholder: '多个模型用逗号分隔，留空表示不限制', created: '创建时间', never: '永不过期', enabledTag: '启用', disabledTag: '禁用', edit: '编辑 API Key', save: '保存', createdMessage: 'API Key 已创建，请立即复制完整 Key', copy: '复制', copied: '已复制', deleteConfirm: '确认删除 API Key「{name}」？', saved: '已保存', deleted: '已删除', empty: '暂无 API Key', invalidExpiry: '失效时间格式无效', fullKeyHint: '完整 Key 只在创建成功时显示一次。'
   },
   settings: {
     title: '配置文件（config.yaml）',

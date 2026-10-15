@@ -181,7 +181,7 @@ curl http://127.0.0.1:8100/v1/chat/completions \
   -d '{"model": "qwen3-8b-mc", "messages": [{"role": "user", "content": "红石中继器有什么用？"}]}'
 ```
 
-可选下游 key 校验：在 `config.yaml` 的 `api_keys` 配置后，下游请求需携带 `Authorization: Bearer <key>`。
+下游 API Key 校验默认开启：在 `config.yaml` 中配置 `api_keys` 后，下游请求需携带 `Authorization: Bearer <key>`。只有明确设置 `api_key_auth: false` 才会关闭校验；开启校验时 `api_keys` 不能为空。
 
 **故障降级**：检索 / 向量库 / embedding 故障时自动降级为透传，不阻断对话；上游故障时返回错误信息（生产环境不返回 traceback）。
 

@@ -51,20 +51,22 @@ def _error(status: int, message: str, err_type: str = "invalid_request_error") -
     )
 
 
-def _require_api_key(request: Request) -> str | None:
+def _require_api_key(request: Request, model: str | None = None) -> str | None:
     state = request.app.state.app  # type: ignore[attr-defined]
+    if state.config.get("api_key_auth", True) is False:
+        return ""
     allowed = state.config.get("api_keys", []) or []
     if not allowed:
         return None
     token = bearer_token(request.headers.get("authorization"))
-    if not check_api_key(allowed, token):
+    if not check_api_key(allowed, token, model):
         return None
     return token
 
 
 @router.get("/v1/models")
 async def list_models(request: Request):
-    if _require_api_key(request) is None and (request.app.state.app.config.get("api_keys") or []):
+    if _require_api_key(request) is None:
         return _error(401, "无效或缺失 API key", "authentication_error")
     state = request.app.state.app  # type: ignore[attr-defined]
     return {"object": "list", "data": state.orch.list_models() if state.orch else []}
@@ -132,7 +134,7 @@ async def _record(state, meta, status, stream: bool, response: str = "") -> None
 @router.post("/v1/chat/completions")
 async def chat_completions(request: Request, body: ChatRequest):
     state = request.app.state.app  # type: ignore[attr-defined]
-    if _require_api_key(request) is None and (state.config.get("api_keys") or []):
+    if _require_api_key(request, body.model) is None and state.config.get("api_key_auth", True) is not False:
         return _error(401, "无效或缺失 API key", "authentication_error")
 
     try:

@@ -48,13 +48,15 @@ def _error(status: int, message: str, err_type: str = "invalid_request_error") -
     )
 
 
-def _require_api_key(request: Request) -> bool:
+def _require_api_key(request: Request, model: str | None = None) -> bool:
     state = request.app.state.app  # type: ignore[attr-defined]
+    if state.config.get("api_key_auth", True) is False:
+        return True
     allowed = state.config.get("api_keys", []) or []
     if not allowed:
-        return True
+        return False
     token = bearer_token(request.headers.get("authorization"))
-    return check_api_key(allowed, token)
+    return check_api_key(allowed, token, model)
 
 
 def _content_to_text(content: Any) -> str:
@@ -98,7 +100,7 @@ def _from_openai_messages(messages: list[dict[str, Any]]) -> tuple[str | None, l
 @router.post("/v1/messages")
 async def messages(request: Request, body: AnthropicRequest):
     state = request.app.state.app  # type: ignore[attr-defined]
-    if not _require_api_key(request):
+    if not _require_api_key(request, body.model):
         return _error(401, "无效或缺失 API key", "authentication_error")
 
     started = time.perf_counter()

@@ -16,6 +16,7 @@
         <el-menu-item index="/kbs"><el-icon><FolderOpened /></el-icon><span>{{ t('nav.kbs') }}</span></el-menu-item>
         <el-menu-item index="/mappings"><el-icon><Share /></el-icon><span>{{ t('nav.mappings') }}</span></el-menu-item>
         <el-menu-item index="/logs"><el-icon><Document /></el-icon><span>{{ t('nav.logs') }}</span></el-menu-item>
+        <el-menu-item index="/api-keys"><el-icon><Key /></el-icon><span>{{ t('nav.apiKeys') }}</span></el-menu-item>
         <el-menu-item index="/settings"><el-icon><Setting /></el-icon><span>{{ t('nav.settings') }}</span></el-menu-item>
       </el-menu>
     </el-aside>
@@ -41,6 +42,7 @@
 </template>
 
 <script setup>
+import { Key } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { setLocale } from '../i18n'

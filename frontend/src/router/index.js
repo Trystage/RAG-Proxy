@@ -12,6 +12,7 @@ const routes = [
       { path: 'kbs', component: () => import('../views/KnowledgeBases.vue'), meta: { titleKey: 'nav.kbs' } },
       { path: 'mappings', component: () => import('../views/Mappings.vue'), meta: { titleKey: 'nav.mappings' } },
       { path: 'logs', component: () => import('../views/Logs.vue'), meta: { titleKey: 'nav.logs' } },
+      { path: 'api-keys', component: () => import('../views/ApiKeys.vue'), meta: { titleKey: 'nav.apiKeys' } },
       { path: 'settings', component: () => import('../views/Settings.vue'), meta: { titleKey: 'nav.settings' } }
     ]
   }

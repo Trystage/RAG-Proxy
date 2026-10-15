@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api import (
+    admin_api,
     admin_auth,
     admin_dashboard,
     admin_kb,
@@ -89,6 +90,7 @@ def create_app(settings: AppSettings) -> FastAPI:
     app.include_router(anthropic_api.router)
 
     # 管理 API
+    app.include_router(admin_api.router)
     app.include_router(admin_auth.router)
     app.include_router(admin_dashboard.router)
     app.include_router(admin_providers.router)

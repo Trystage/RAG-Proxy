@@ -5,8 +5,9 @@
 # 修改后 Web UI 或 API 热重载，无需重启容器。
 # ============================================================
 
-# 下游 API 可选 key 校验：留空数组则下游 API 不校验；
-# 非空时下游请求必须携带 Authorization: Bearer <key>
+# 下游 API key 校验默认开启；只有显式设置为 false 才会关闭。
+# 开启后下游请求必须携带 Authorization: Bearer <key>，且 api_keys 不能为空。
+api_key_auth: true
 api_keys: []
 
 # ---------- LLM Provider（即文档中的 upstreams）----------

@@ -184,7 +184,7 @@ curl http://127.0.0.1:8100/v1/chat/completions \
   -d '{"model": "qwen3-8b-mc", "messages": [{"role": "user", "content": "What does a redstone repeater do?"}]}'
 ```
 
-Optional API-key auth: configure `api_keys` in `config.yaml`; downstream requests then need `Authorization: Bearer <key>`.
+Downstream API-key authentication is enabled by default. Set `api_keys` in `config.yaml`, then send `Authorization: Bearer <key>`. To explicitly allow anonymous downstream access, set `api_key_auth: false`.
 
 **Failure handling:** retrieval / vector-store / embedding failures degrade to transparent pass-through (conversation continues); upstream failures return a clean error (no traceback in production).
 

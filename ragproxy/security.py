@@ -4,7 +4,11 @@ from __future__ import annotations
 import datetime
 import hmac
 import time
+from collections.abc import Mapping
 from typing import Any
+
+
+KeyConfig = str | Mapping[str, Any]
 
 import jwt
 
@@ -43,12 +47,48 @@ def check_secret(secret_key: str, candidate: str) -> bool:
     return constant_time_eq(secret_key, candidate)
 
 
-def check_api_key(allowed_keys: list[str], candidate: str | None) -> bool:
+def _key_is_valid(key_config: KeyConfig, candidate: str, model: str | None) -> bool:
+    if isinstance(key_config, str):
+        return constant_time_eq(key_config, candidate)
+    if not key_config.get("enabled", True):
+        return False
+
+    key_value = key_config.get("key")
+    if not isinstance(key_value, str) or not constant_time_eq(key_value, candidate):
+        return False
+
+    expires_at = key_config.get("expires_at")
+    if expires_at:
+        try:
+            if isinstance(expires_at, (int, float)):
+                expired = time.time() >= expires_at
+            else:
+                expiry_text = str(expires_at).replace("Z", "+00:00")
+                expiry = datetime.datetime.fromisoformat(expiry_text)
+                if expiry.tzinfo is None:
+                    expiry = expiry.replace(tzinfo=datetime.timezone.utc)
+                expired = datetime.datetime.now(datetime.timezone.utc) >= expiry
+            if expired:
+                return False
+        except (TypeError, ValueError, OverflowError):
+            return False
+
+    allowed_models = key_config.get("allowed_models") or []
+    if allowed_models and (not model or model not in allowed_models):
+        return False
+    return True
+
+
+def check_api_key(
+    allowed_keys: list[KeyConfig],
+    candidate: str | None,
+    model: str | None = None,
+) -> bool:
     if not allowed_keys:
         return True  # 未配置 key 校验，放行
     if not candidate:
         return False
-    return any(constant_time_eq(k, candidate) for k in allowed_keys)
+    return any(_key_is_valid(key_config, candidate, model) for key_config in allowed_keys)
 
 
 def bearer_token(authorization: str | None) -> str | None:
