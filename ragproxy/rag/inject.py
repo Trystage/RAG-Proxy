@@ -23,7 +23,7 @@ def build_context_text(
     for i, c in enumerate(chunks, 1):
         src = c.get("file_name") or c.get("metadata", {}).get("source") or "未知来源"
         text = (c.get("text") or "").strip()
-        parts.append(f"[{i}] (来源: {src})\n{text}")
+        parts.append(f"\n{text}")
     context = "\n\n".join(parts)
     injected = template.replace("{context}", context).replace("{query}", query)
     injected = truncate_by_tokens(injected, max_context_tokens) if max_context_tokens else injected
