@@ -42,7 +42,7 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
-            type=sha,prefix=sha-
+            type=sha,prefix=commit-
 
       - name: Build and publish Docker image
         uses: docker/build-push-action@v6
