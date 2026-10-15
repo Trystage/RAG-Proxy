@@ -23,7 +23,13 @@
       <el-header class="header">
         <span class="header-title">{{ $route.meta.titleKey ? t($route.meta.titleKey) : '' }}</span>
         <div class="header-actions">
-          <el-button text @click="toggleLocale">{{ locale === 'zh' ? 'EN' : '中文' }}</el-button>
+          <el-select v-model="locale" size="small" class="locale-select" @change="setLocale">
+            <el-option label="English" value="en" />
+            <el-option label="中文" value="zh" />
+            <el-option label="Русский" value="ru" />
+            <el-option label="Español" value="es" />
+            <el-option label="Português" value="pt" />
+          </el-select>
           <el-button text @click="logout">{{ t('nav.logout') }}</el-button>
         </div>
       </el-header>
@@ -44,9 +50,6 @@ const { t, locale } = useI18n()
 function logout() {
   localStorage.removeItem('ragproxy_token')
   router.push('/login')
-}
-function toggleLocale() {
-  setLocale(locale.value === 'zh' ? 'en' : 'zh')
 }
 </script>
 
@@ -132,6 +135,9 @@ function toggleLocale() {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.locale-select {
+  width: 120px;
 }
 .main {
   background: transparent;

@@ -5,7 +5,13 @@
       <template #header>
         <div class="login-title">
           <span>{{ t('login.title') }}</span>
-          <el-button text size="small" @click="toggleLocale">{{ locale === 'zh' ? 'EN' : '中文' }}</el-button>
+          <el-select v-model="locale" size="small" class="locale-select" @change="setLocale">
+            <el-option label="English" value="en" />
+            <el-option label="中文" value="zh" />
+            <el-option label="Русский" value="ru" />
+            <el-option label="Español" value="es" />
+            <el-option label="Português" value="pt" />
+          </el-select>
         </div>
       </template>
       <el-form @submit.prevent="doLogin">
@@ -37,9 +43,6 @@ import yamaBg from '../assets/yama-beautified.jpg'
 
 const router = useRouter()
 const { t, locale } = useI18n()
-function toggleLocale() {
-  setLocale(locale.value === 'zh' ? 'en' : 'zh')
-}
 const key = ref('')
 const loading = ref(false)
 
@@ -101,6 +104,9 @@ async function doLogin() {
 .login-card :deep(.el-input__wrapper) {
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+}
+.locale-select {
+  width: 120px;
 }
 .login-title {
   font-size: 18px;
