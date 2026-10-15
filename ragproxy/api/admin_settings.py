@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from .admin_common import get_state, require_admin
 from ..config import is_masked
+from ..i18n import locale_from_request, translate
 
 router = APIRouter()
 
@@ -52,7 +53,7 @@ def _restore_secrets(state, old: dict, new: dict) -> None:
                 if is_masked(new_key) or not new_key:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Provider「{item.get('id')}」的 API Key 已损坏（配置中仅存脱敏占位符），请重新输入真实 API Key 后再保存",
+                        detail=translate("masked_key_invalid", locale_from_request(request), provider=item.get("id")),
                     )
                 continue  # new_key 为真实值，直接使用
             if is_masked(new_key) or new_key in (None, ""):
@@ -62,7 +63,7 @@ def _restore_secrets(state, old: dict, new: dict) -> None:
                     # 无旧值可恢复且提交的是脱敏占位：拒绝入库
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Provider「{item.get('id')}」未填写真实 API Key（不能保存脱敏占位符）",
+                        detail=translate("masked_key_missing", locale_from_request(request), provider=item.get("id")),
                     )
 
 
@@ -77,16 +78,16 @@ async def update_settings(request: Request, body: SettingsBody):
     try:
         parsed = yaml.safe_load(body.content)
     except yaml.YAMLError as e:
-        raise HTTPException(status_code=400, detail=f"YAML 解析失败：{e}")
+        raise HTTPException(status_code=400, detail=translate("yaml_invalid", locale_from_request(request), error=e))
     if not isinstance(parsed, dict):
-        raise HTTPException(status_code=400, detail="配置必须是 YAML 映射")
+        raise HTTPException(status_code=400, detail=translate("config_mapping", locale_from_request(request)))
     _restore_secrets(state, state.config.raw(), parsed)
     try:
         state.config.update_yaml(yaml.safe_dump(parsed, allow_unicode=True, sort_keys=False, default_flow_style=False))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=400, detail=f"配置写入失败：{e}")
+        raise HTTPException(status_code=400, detail=translate("config_write_failed", locale_from_request(request), error=e))
     try:
         state.reload()
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=f"配置热重载失败：{e}")
-    return {"ok": True, "message": "配置已保存并热重载"}
+        raise HTTPException(status_code=500, detail=translate("reload_failed", locale_from_request(request), error=e))
+    return {"ok": True, "message": translate("config_saved", locale_from_request(request))}

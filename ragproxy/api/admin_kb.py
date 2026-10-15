@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from ..utils.archive import ArchiveError, archive_is_supported, extract_archive
+from ..i18n import locale_from_request, translate
 from .admin_common import get_state, require_admin, write_config
 
 log = logging.getLogger("ragproxy.admin_kb")
@@ -23,9 +24,9 @@ router = APIRouter()
 KB_NAME_RE = re.compile(r"^[\w\u4e00-\u9fff-]{1,64}$")
 
 
-def _check_kb_name(name: str) -> str:
+def _check_kb_name(name: str, locale: str = "zh") -> str:
     if not name or not KB_NAME_RE.match(name):
-        raise HTTPException(status_code=400, detail="知识库名称仅允许中文/字母/数字/下划线/连字符，长度 1-64")
+        raise HTTPException(status_code=400, detail=translate("invalid_kb_name", locale))
     return name
 
 
@@ -80,12 +81,12 @@ class CreateKbBody(BaseModel):
 async def create_kb(request: Request, body: CreateKbBody):
     require_admin(request)
     state = get_state(request)
-    name = _check_kb_name(body.name)
+    name = _check_kb_name(body.name, locale_from_request(request))
     await state.vs.create_kb(name)
     state.ingest.kb_doc_dir(name)
     if body.embed_provider:
         if body.embed_provider not in state.embeds:
-            raise HTTPException(status_code=400, detail=f"Embedding Provider 不存在：{body.embed_provider}")
+            raise HTTPException(status_code=400, detail=translate("embedding_not_found", locale_from_request(request), provider=body.embed_provider))
         _set_kb_provider_cfg(state, name, body.embed_provider)
     return {"ok": True, "name": name}
 
@@ -99,9 +100,9 @@ async def set_kb_provider(request: Request, name: str, body: SetKbProviderBody):
     """设置知识库使用的 Embedding Provider（None=全局默认）。维度变化时提示重建索引。"""
     require_admin(request)
     state = get_state(request)
-    name = _check_kb_name(name)
+    name = _check_kb_name(name, locale_from_request(request))
     if body.embed_provider and body.embed_provider not in state.embeds:
-        raise HTTPException(status_code=400, detail=f"Embedding Provider 不存在：{body.embed_provider}")
+        raise HTTPException(status_code=400, detail=translate("embedding_not_found", locale_from_request(request), provider=body.embed_provider))
     old_pid = _kb_provider_cfg(state, name)
     old_dim = await state.vs.dim(name) if state.vs else 0
     _set_kb_provider_cfg(state, name, body.embed_provider)
@@ -122,9 +123,9 @@ async def set_kb_provider(request: Request, name: str, body: SetKbProviderBody):
         "new_dim": target_dim,
         "need_reindex": need_reindex,
         "message": (
-            f"向量维度由 {old_dim} 变为 {target_dim}，请重建该知识库索引以应用新维度"
+            translate("kb_reindex", locale_from_request(request), old=old_dim, new=target_dim)
             if need_reindex
-            else "已更新，该知识库后续索引与检索将使用新 Provider"
+            else translate("kb_provider_updated", locale_from_request(request))
         ),
     }
 
@@ -158,7 +159,7 @@ async def delete_file(request: Request, name: str, file_id: str):
     name = _check_kb_name(name)
     ok = await state.ingest.delete_file(name, file_id)
     if not ok:
-        raise HTTPException(status_code=404, detail="文件不存在")
+        raise HTTPException(status_code=404, detail=translate("file_not_found", locale_from_request(request)))
     return {"ok": True}
 
 
@@ -180,7 +181,7 @@ async def kb_test(request: Request, name: str, body: dict[str, Any]):
     top_k = int(body.get("top_k", 5))
     threshold = float(body.get("score_threshold", 0.0))
     if not query:
-        raise HTTPException(status_code=400, detail="query 不能为空")
+        raise HTTPException(status_code=400, detail=translate("query_required", locale_from_request(request)))
     results = await state.ingest.test_query(name, query, top_k, threshold)
     return {"items": results, "total": len(results)}
 
@@ -191,7 +192,7 @@ async def task_status(request: Request, name: str, task_id: str):
     state = get_state(request)
     task = state.ingest.get_task(task_id) if state.ingest else None
     if task is None:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise HTTPException(status_code=404, detail=translate("task_not_found", locale_from_request(request)))
     return task
 
 
@@ -210,7 +211,7 @@ async def _save_uploaded(
     if len(files) > max_files:
         raise HTTPException(
             status_code=400,
-            detail=f"单次上传文件数 {len(files)} 超过上限 {max_files}",
+            detail=translate("upload_count_limit", locale_from_request(request), count=len(files), limit=max_files),
         )
 
     saved: list[dict] = []
@@ -253,7 +254,7 @@ async def _save_uploaded(
         if total_bytes > max_batch:
             raise HTTPException(
                 status_code=400,
-                detail=f"批量上传总大小超过上限 {cfg.get('max_batch_size_mb', 2048)} MB",
+                detail=translate("upload_size_limit", locale_from_request(request), limit=cfg.get("max_batch_size_mb", 2048)),
             )
         if is_archive:
             arch_path = tmp_task / original
@@ -328,7 +329,7 @@ async def upload_files(
     if not saved:
         return JSONResponse(
             status_code=400,
-            content={"ok": False, "message": "没有可接受的文件", "rejected": rejected},
+            content={"ok": False, "message": translate("no_acceptable_files", locale_from_request(request)), "rejected": rejected},
         )
 
     task_id = state.ingest.new_task(name, "upload", len(saved))
@@ -350,7 +351,7 @@ async def upload_files(
                 try:
                     await state.ingest.index_file(name, fid)
                 except Exception as e:  # noqa: BLE001
-                    log.exception("上传后索引失败 %s", fid)
+                    log.exception("Failed to index uploaded file %s", fid)
                     state.ingest.update_task(task_id, failed=state.ingest.tasks[task_id]["failed"] + 1)
                     state.ingest.record_file(name, fid, status="failed", error=str(e))
                 done += 1
@@ -358,7 +359,7 @@ async def upload_files(
             status = "done" if state.ingest.tasks[task_id]["failed"] == 0 else "partial"
             state.ingest.finish_task(task_id, status)
         except Exception as e:  # noqa: BLE001
-            log.exception("上传任务异常")
+            log.exception("Upload task failed")
             state.ingest.finish_task(task_id, "failed", error=str(e))
 
     asyncio.create_task(run())

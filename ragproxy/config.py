@@ -129,7 +129,7 @@ class ConfigManager:
         if not self.settings.config_path.exists():
             src = DEFAULTS_DIR / DEFAULT_CONFIG_NAME
             shutil.copyfile(src, self.settings.config_path)
-            self.logger_info(f"已从内置默认配置初始化：{self.settings.config_path}")
+            self.logger_info(f"Initialized configuration from built-in defaults: {self.settings.config_path}")
 
     def logger_info(self, msg: str) -> None:  # pragma: no cover - 避免循环导入
         import logging

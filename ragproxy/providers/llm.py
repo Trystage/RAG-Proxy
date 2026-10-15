@@ -84,15 +84,15 @@ class LLMProvider(BaseProvider):
                 headers=self._headers(),
             ) as resp:
                 if resp.status_code < 400:
-                    return {"ok": True, "message": "连接成功", "status": resp.status_code}
+                    return {"ok": True, "message": "Connection successful", "status": resp.status_code}
                 body = (await resp.aread())[:500].decode("utf-8", "replace")
                 return {
                     "ok": False,
-                    "message": f"上游返回 {resp.status_code}",
+                    "message": f"Upstream returned {resp.status_code}",
                     "detail": body,
                 }
         except Exception as e:  # noqa: BLE001
-            return {"ok": False, "message": f"连接失败：{e}"}
+            return {"ok": False, "message": f"Connection failed: {e}"}
 
     async def chat(
         self, payload: dict[str, Any]

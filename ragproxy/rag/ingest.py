@@ -248,7 +248,7 @@ class IngestService:
                 stats["errors"].append({"file_id": fid, "error": str(e)})
                 self.record_file(kb, fid, status="failed", error=str(e))
             except Exception as e:  # noqa: BLE001
-                log.exception("索引文件 %s 失败", fid)
+                log.exception("Failed to index file %s", fid)
                 stats["failed"] += 1
                 stats["errors"].append({"file_id": fid, "error": str(e)})
                 self.record_file(kb, fid, status="failed", error=str(e))

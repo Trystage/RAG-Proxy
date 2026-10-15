@@ -118,8 +118,8 @@ def create_app(settings: AppSettings) -> FastAPI:
         async def no_frontend():
             return JSONResponse(
                 {
-                    "message": "前端尚未构建。请进入 frontend/ 执行 npm install && npm run build，"
-                    "或在 Docker 镜像中构建。管理 API 文档见 /admin/docs。",
+                    "message": "Frontend is not built. Run npm install && npm run build in frontend/, "
+                    "or build it in the Docker image. Admin API docs: /admin/docs.",
                     "health": "/health",
                 }
             )

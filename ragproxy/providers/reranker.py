@@ -159,6 +159,6 @@ class ReRankerProvider(BaseProvider):
     async def test(self) -> dict[str, Any]:
         try:
             scored = await self.rerank("ping", ["hello world"])
-            return {"ok": True, "message": f"连接成功（模型 {self.model}，返回 {len(scored)} 条）"}
+            return {"ok": True, "message": f"Connection successful (model {self.model}, {len(scored)} results)"}
         except Exception as e:  # noqa: BLE001
-            return {"ok": False, "message": f"连接失败：{e}"}
+            return {"ok": False, "message": f"Connection failed: {e}"}

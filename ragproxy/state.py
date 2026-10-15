@@ -51,7 +51,7 @@ class AppState:
             try:
                 self.llm_providers[u["id"]] = LLMProvider(u)
             except Exception as e:  # noqa: BLE001
-                log.warning("LLM Provider %s 初始化失败：%s", u.get("id"), e)
+                log.warning("LLM provider %s initialization failed: %s", u.get("id"), e)
 
         rag_cfg = cfg.get("rag", {}) or {}
         embeddings = cfg.get("embeddings", []) or []
@@ -65,7 +65,7 @@ class AppState:
                     e, data_dir / "cache" / "embedding"
                 )
             except Exception as ex:  # noqa: BLE001
-                log.warning("Embedding Provider %s 初始化失败：%s", e.get("id"), ex)
+                log.warning("Embedding provider %s initialization failed: %s", e.get("id"), ex)
         want = rag_cfg.get("embed_provider")
         self.embed = (
             self.embeds.get(want)
@@ -109,7 +109,7 @@ class AppState:
     def reload(self) -> dict[str, Any]:
         cfg = self.config.load(force=True)
         self._init_components()
-        return {"ok": True, "message": "配置已热重载"}
+        return {"ok": True, "message": "Configuration reloaded"}
 
     # ---------- Provider 查找 ----------
     def get_llm(self, upstream_id: str) -> LLMProvider:

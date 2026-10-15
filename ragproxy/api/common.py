@@ -82,7 +82,7 @@ async def run_pipeline(
         result.hit = bool(chunks)
     except Exception as e:  # noqa: BLE001
         # 检索链路故障 → 降级透传
-        log.warning("检索链路故障，降级透传：%s", e)
+        log.warning("Retrieval pipeline failed; falling back to passthrough: %s", e)
         result.stats = {"degraded": str(e)}
 
     return result

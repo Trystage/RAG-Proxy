@@ -9,6 +9,7 @@ from fastapi import HTTPException, Request
 from ..config import is_masked
 from ..security import bearer_token, verify_token
 from ..state import AppState
+from ..i18n import locale_from_request, translate
 
 
 def require_admin(request: Request) -> dict[str, Any]:
@@ -16,7 +17,7 @@ def require_admin(request: Request) -> dict[str, Any]:
     token = bearer_token(request.headers.get("authorization"))
     payload = verify_token(state.secret_key, token or "") if token else None
     if payload is None:
-        raise HTTPException(status_code=401, detail="未登录或登录已过期")
+        raise HTTPException(status_code=401, detail=translate("auth_required", locale_from_request(request)))
     return payload
 
 
@@ -39,7 +40,7 @@ def write_config(state: AppState, cfg: dict[str, Any]) -> None:
                 else:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Provider「{item.get('id')}」的 API Key 是脱敏占位符，禁止写回配置",
+                        detail=translate("masked_key", locale_from_request(request), provider=item.get("id")),
                     )
     content = yaml.safe_dump(
         cfg, allow_unicode=True, sort_keys=False, default_flow_style=False

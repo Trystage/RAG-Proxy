@@ -113,7 +113,7 @@ class RequestLogger:
                     finally:
                         conn.close()
             except Exception:  # noqa: BLE001
-                log.exception("写入请求日志失败")
+                log.exception("Failed to write request log")
 
         await asyncio.to_thread(_write)
 

@@ -150,7 +150,7 @@ class EmbeddingProvider(BaseProvider):
             vec = await self._embed_remote(["ping"])
             return {
                 "ok": True,
-                "message": f"连接成功（模型 {self.model}，维度 {len(vec[0])}）",
+                "message": f"Connection successful (model {self.model}, dimension {len(vec[0])})",
             }
         except Exception as e:  # noqa: BLE001
-            return {"ok": False, "message": f"连接失败：{e}"}
+            return {"ok": False, "message": f"Connection failed: {e}"}

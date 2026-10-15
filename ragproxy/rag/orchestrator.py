@@ -126,7 +126,7 @@ class RAGOrchestrator:
                 kb_hits[kb] = -1
                 import logging
 
-                logging.getLogger("ragproxy.rag").warning("知识库 %s 检索失败：%s", kb, e)
+                logging.getLogger("ragproxy.rag").warning("Knowledge base %s retrieval failed: %s", kb, e)
             per_kb.append(results)
             kb_hits[kb] = len(results)
             if merge == "priority" and len(results) >= top_k:
@@ -158,7 +158,7 @@ class RAGOrchestrator:
             except ProviderError as e:
                 import logging
 
-                logging.getLogger("ragproxy.rag").warning("ReRanker 调用失败，使用原始排序：%s", e)
+                logging.getLogger("ragproxy.rag").warning("ReRanker call failed; using original order: %s", e)
 
         elapsed = (time.perf_counter() - started) * 1000
         stats = {

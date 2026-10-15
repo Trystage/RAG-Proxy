@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from ..i18n import locale_from_request, translate
 from .admin_common import get_state, require_admin, save_section, find_index
 
 router = APIRouter()
@@ -14,20 +15,20 @@ VALID_MERGE = {"priority", "concat", "rrf"}
 VALID_INJECT = {"system_prepend", "system_append", "new_message"}
 
 
-def _validate(m: dict[str, Any]) -> None:
+def _validate(m: dict[str, Any], locale: str = "zh") -> None:
     if not m.get("name"):
-        raise HTTPException(status_code=400, detail="模型名不能为空")
+        raise HTTPException(status_code=400, detail=translate("model_required", locale))
     merge = m.get("kb_merge") or m.get("kb-merge")
     if merge is not None and merge not in VALID_MERGE:
-        raise HTTPException(status_code=400, detail=f"kb_merge 仅支持 {sorted(VALID_MERGE)}")
+        raise HTTPException(status_code=400, detail=translate("merge_invalid", locale, values=sorted(VALID_MERGE)))
     inject = m.get("inject_mode") or m.get("inject-mode")
     if inject is not None and inject not in VALID_INJECT:
-        raise HTTPException(status_code=400, detail=f"inject_mode 仅支持 {sorted(VALID_INJECT)}")
+        raise HTTPException(status_code=400, detail=translate("inject_invalid", locale, values=sorted(VALID_INJECT)))
     kb = m.get("kb")
     if kb is not None and not (isinstance(kb, str) or isinstance(kb, list)):
-        raise HTTPException(status_code=400, detail="kb 必须是字符串或字符串数组")
+        raise HTTPException(status_code=400, detail=translate("kb_invalid", locale))
     if not m.get("upstream"):
-        raise HTTPException(status_code=400, detail="必须指定 upstream")
+        raise HTTPException(status_code=400, detail=translate("upstream_required", locale))
 
 
 @router.get("/admin/mappings")
@@ -47,9 +48,9 @@ async def create_mapping(request: Request, body: MappingBody):
     state = get_state(request)
     items = state.config.raw().get("models", []) or []
     item = body.item
-    _validate(item)
+    _validate(item, locale_from_request(request))
     if find_index(items, "name", item["name"]) >= 0:
-        raise HTTPException(status_code=400, detail=f"模型名已存在：{item['name']}")
+        raise HTTPException(status_code=400, detail=translate("model_exists", locale_from_request(request), name=item["name"]))
     items.append(item)
     save_section(state, "models", items)
     return {"ok": True, "item": item}
@@ -62,11 +63,11 @@ async def update_mapping(request: Request, model_name: str, body: MappingBody):
     items = state.config.raw().get("models", []) or []
     idx = find_index(items, "name", model_name)
     if idx < 0:
-        raise HTTPException(status_code=404, detail="映射不存在")
+        raise HTTPException(status_code=404, detail=translate("mapping_not_found", locale_from_request(request)))
     item = body.item
-    _validate(item)
+    _validate(item, locale_from_request(request))
     if item.get("name") and item["name"] != model_name:
-        raise HTTPException(status_code=400, detail="不允许修改模型名（请删除后重建）")
+        raise HTTPException(status_code=400, detail=translate("immutable_model", locale_from_request(request)))
     item["name"] = model_name
     items[idx] = item
     save_section(state, "models", items)
@@ -80,7 +81,7 @@ async def delete_mapping(request: Request, model_name: str):
     items = state.config.raw().get("models", []) or []
     idx = find_index(items, "name", model_name)
     if idx < 0:
-        raise HTTPException(status_code=404, detail="映射不存在")
+        raise HTTPException(status_code=404, detail=translate("mapping_not_found", locale_from_request(request)))
     items.pop(idx)
     save_section(state, "models", items)
     return {"ok": True}
