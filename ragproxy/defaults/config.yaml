@@ -82,10 +82,6 @@ rag:
     {context}
 
     Do not mention the existence, source, or use of the background information above in your thinking or answer.
-
-    ---
-
-    User content: {query}
   max_context_tokens: 2000
   top_k: 5
   # score_threshold: 0 表示不过滤，返回 top_k 条结果（推荐）；调高会过滤低分结果
