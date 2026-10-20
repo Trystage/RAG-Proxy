@@ -151,6 +151,23 @@ models:
 
 Downstream clients simply use the mapped `model` name — no code changes or extra headers required.
 
+### Choosing an Injection Mode
+
+Set `inject_mode` in the model mapping to choose where retrieved knowledge is placed. All three modes preserve the original user messages and conversation history.
+
+| Mode | Placement | Suggested use and benefits |
+|------|-----------|----------------------------|
+| `system_prepend` (default) | Insert a new system message before the first system message | A general default when the model should see the knowledge-base background at the beginning without changing the client's original system prompt. This does not guarantee that the model gives it higher priority. |
+| `system_append` | Append retrieved content to the first system message | Short conversations, one-off questions, or clients that prefer a single combined system message. Keeps the original prompt and retrieved knowledge together without adding another message. |
+| `new_message` | Add a new system message at the end of the message list | Upstreams that support shared-prefix prompt caching and accept a trailing system message. Changing retrieval content stays at the end, leaving the earlier system prompt and history unchanged and potentially allowing cached prefixes to be reused. |
+
+Notes:
+
+- The first two modes only act on the **first system message**, leaving any later system messages unchanged. If there is no system message, they insert one at the beginning.
+- `new_message` does not guarantee a cache hit. Results depend on the upstream's caching rules, minimum length, and exact prefix matching. Some upstreams do not accept a trailing system message; check compatibility first.
+- With `system_prepend` and `system_append`, changing retrieval content near the start of the request may reduce shared-prefix cache reuse.
+- `{query}` is replaced in all three modes without overwriting the original user message. Remove `User content: {query}` from the injection template if you do not want to repeat the question.
+
 ### Multi-KB Merge Strategies
 
 | Value | Behavior |
