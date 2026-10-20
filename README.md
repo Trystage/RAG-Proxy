@@ -10,6 +10,8 @@ A **knowledge-base proxy** that sits between your downstream application and ups
 
 This add-on can dramatically multiply an AI model's expertise in a specific domain: even a standard Qwen3.8-27B can write Spigot plugins smoothly with the right knowledge base. I do not particularly like using AI to write plugins, but AI assistance is very convenient for understanding APIs and parameters. It can also be deployed locally, providing strong security and privacy.
 
+For example, you can download the full [CookLikeHOC](https://github.com/Gar-b-age/CookLikeHOC) collection, import and index its recipe documents as a knowledge base, and route your own agent to it — turning your agent into a super chef with a whole cookbook at its fingertips.
+
 **No local model dependencies.** Embedding, ReRank, and LLM inference all run through remote APIs. No `torch`, `transformers`, or `onnxruntime` in the container.
 
 ---
@@ -301,4 +303,3 @@ rag-proxy/
 - Legacy `.doc` (binary format) and scanned PDFs without a text layer cannot be parsed; convert beforehand
 - The built-in vector store is suited for single-node, medium-scale knowledge bases; for large-scale retrieval, switch to a standalone Chroma Server
 - Anthropic-format requests: injected context is merged into the `system` field (the Anthropic protocol has no message-level system injection)
-- No CI in this repo; the Dockerfile's multi-stage build includes Node for frontend compilation

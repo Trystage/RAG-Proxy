@@ -10,6 +10,8 @@
 
 这个外挂可以让 AI 的专项能力大幅增强，甚至翻倍。例如，普通的 Qwen3.8-27B 配合合适的知识库，也可以非常流畅地编写 Spigot 插件。项目支持本地部署，安全性和隐私性都很高。
 
+你也可以下载整套 [CookLikeHOC](https://github.com/Gar-b-age/CookLikeHOC)，将其中的菜谱文档导入知识库并建立索引，再路由给自己的 Agent 让它变成一个老乡鸡大厨。
+
 **零本地模型依赖。** Embedding、ReRank、LLM 推理全部通过远程接口调用；容器内无 `torch`、`transformers`、`onnxruntime`，无模型文件。
 
 ---
@@ -298,4 +300,3 @@ rag-proxy/
 - 旧版 `.doc`（二进制）与扫描版 PDF 无文字层时无法解析文本，需先转换
 - 内置向量库适合单机中小规模知识库；超大规模检索建议切换独立 Chroma Server
 - Anthropic 格式请求的注入统一合并到 `system` 字段（Anthropic 协议无 message 级 system 注入）
-- 本仓库未包含 CI；Dockerfile 前端构建产物需在具备 Node 的构建环境生成（镜像内多阶段已包含）
