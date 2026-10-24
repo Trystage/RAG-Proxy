@@ -85,7 +85,8 @@
           </el-select>
         </el-form-item>
         <el-form-item :label="tr('providers.baseUrl')" required>
-          <el-input v-model="dialog.item.base_url" placeholder="http://127.0.0.1:8080/v1" />
+          <el-input v-model="dialog.item.base_url" :placeholder="dialog.item.type === 'ollama' ? 'http://127.0.0.1:11434' : 'http://127.0.0.1:8080/v1'" />
+          <small v-if="dialog.item.type === 'ollama'">{{ tr('providers.ollamaHint') }}</small>
         </el-form-item>
         <el-form-item :label="tr('providers.apiKey')">
           <el-input v-model="dialog.item.api_key" type="password" show-password placeholder="sk-xxx" />
@@ -93,15 +94,16 @@
         <el-form-item :label="tr('common.timeout')">
           <el-input-number v-model="dialog.item.timeout" :min="5" :max="600" />
         </el-form-item>
-        <template v-if="dialog.kind === 'llm'">
-          <el-form-item :label="tr('providers.modelName')">
-            <el-input v-model="dialog.item.model" :placeholder="tr('providers.modelPlaceholder')" />
-          </el-form-item>
-        </template>
+        <el-form-item v-if="dialog.kind === 'llm' || dialog.kind === 'embedding'" :label="tr('providers.modelName')" :required="dialog.kind === 'embedding'">
+          <div style="display: flex; gap: 8px; width: 100%">
+            <el-input v-model="dialog.item.model" clearable :placeholder="tr(dialog.kind === 'llm' ? 'providers.modelPlaceholder' : 'providers.embedModelPlaceholder')" />
+            <el-button v-if="canDiscover" :loading="discovering" :disabled="!dialog.item.base_url" @click="fetchModels">{{ tr('providers.fetchModels') }}</el-button>
+          </div>
+          <el-select v-if="modelChoices.length" :model-value="null" filterable :placeholder="tr('providers.selectModel')" style="width: 100%; margin-top: 8px" @change="selectModel">
+            <el-option v-for="model in modelChoices" :key="model" :label="model" :value="model" />
+          </el-select>
+        </el-form-item>
         <template v-if="dialog.kind === 'embedding'">
-          <el-form-item :label="tr('common.model')" required>
-            <el-input v-model="dialog.item.model" :placeholder="tr('providers.embedModelPlaceholder')" />
-          </el-form-item>
           <el-form-item :label="tr('providers.dimensions')">
             <el-input-number v-model="dialog.item.dimensions" :min="0" :max="8192" />
           </el-form-item>
@@ -121,10 +123,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import http, { errMsg } from '../api'
+import http, { errMsg, discoverProviderModels } from '../api'
 
 const { t: tr } = useI18n()
 
@@ -140,6 +142,35 @@ const saving = ref(false)
 
 const dialog = reactive({ show: false, kind: 'llm', title: '', item: {}, originId: '' })
 const vsForm = reactive({ type: 'simple', simple: { cache_limit: 200000 }, chroma_http: {} })
+const modelChoices = ref([])
+const discovering = ref(false)
+let discoveryVersion = 0
+const discoveryContext = computed(() => JSON.stringify([dialog.show, dialog.kind, dialog.originId, dialog.item.type, dialog.item.base_url, dialog.item.api_key]))
+const canDiscover = computed(() => (dialog.kind === 'llm' && ['openai', 'anthropic', 'ollama'].includes(dialog.item.type)) || (dialog.kind === 'embedding' && dialog.item.type === 'openai'))
+watch(discoveryContext, () => {
+  discoveryVersion++
+  modelChoices.value = []
+  discovering.value = false
+}, { flush: 'sync' })
+async function fetchModels() {
+  const version = ++discoveryVersion
+  const context = discoveryContext.value
+  modelChoices.value = []
+  discovering.value = true
+  try {
+    const { data } = await discoverProviderModels(dialog.kind, { ...dialog.item }, dialog.originId)
+    if (version !== discoveryVersion || context !== discoveryContext.value) return
+    modelChoices.value = [...new Set((data.items || []).map(item => item.id).filter(id => typeof id === 'string' && id))]
+    if (!modelChoices.value.length) ElMessage.info(tr('providers.noModels'))
+  } catch (e) {
+    if (version === discoveryVersion && context === discoveryContext.value) ElMessage.error(errMsg(e))
+  } finally {
+    if (version === discoveryVersion) discovering.value = false
+  }
+}
+function selectModel(model) {
+  if (dialog.show && modelChoices.value.includes(model)) dialog.item.model = model
+}
 
 function mask(v) {
   if (!v) return ''
@@ -147,7 +178,7 @@ function mask(v) {
   return v.length > 8 ? v.slice(0, 3) + '****' + v.slice(-3) : v.slice(0, 2) + '***'
 }
 function typeOptions(kind) {
-  if (kind === 'llm') return ['openai', 'anthropic']
+  if (kind === 'llm') return ['openai', 'anthropic', 'ollama']
   if (kind === 'embedding') return ['openai']
   return ['openai', 'cohere', 'jina']
 }

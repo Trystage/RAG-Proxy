@@ -41,9 +41,7 @@ class AppState:
         cfg = self.config.raw()
         data_dir: Path = self.settings.data_dir
 
-        # 关闭旧的 provider 连接
-        for p in self.llm_providers.values():
-            pass
+        # 热重载不关闭旧连接，已开始的请求仍持有原 provider。
         self.llm_providers = {}
 
         upstreams = cfg.get("upstreams", []) or []

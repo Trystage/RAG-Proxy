@@ -10,7 +10,7 @@ A **knowledge-base proxy** that sits between your downstream application and ups
 
 This add-on can dramatically multiply an AI model's expertise in a specific domain: even a standard Qwen3.8-27B can write Spigot plugins smoothly with the right knowledge base. I do not particularly like using AI to write plugins, but AI assistance is very convenient for understanding APIs and parameters. It can also be deployed locally, providing strong security and privacy.
 
-For example, you can download the full [CookLikeHOC](https://github.com/Gar-b-age/CookLikeHOC) collection, import and index its recipe documents as a knowledge base, and route your own agent to it — turning your agent into a super chef with a whole cookbook at its fingertips.
+For example, you can download the full [CookLikeHOC](https://github.com/Gar-b-age/CookLikeHOC) collection, import and index its recipe documents as a knowledge base, and route your own agent to it — turning your agent into a super chinese chef with a whole chinese cookbook at its fingertips.
 
 **No local model dependencies.** Embedding, ReRank, and LLM inference all run through remote APIs. No `torch`, `transformers`, or `onnxruntime` in the container.
 

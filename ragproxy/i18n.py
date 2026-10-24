@@ -191,6 +191,17 @@ _MESSAGES["pt"] = {
 }
 
 
+_DISCOVERY_MESSAGES = {
+    "zh": ("此 Provider 不支持获取模型列表", "请输入有效的 HTTP(S) 上游地址", "地址或接口类型已改变，请重新输入 API Key 后获取模型", "上游获取模型失败（HTTP {status}）", "获取模型失败：连接异常或上游响应格式无效"),
+    "en": ("Model discovery is not supported for this provider", "Enter a valid HTTP(S) upstream URL", "The URL or protocol changed; re-enter the API key to fetch models", "Upstream model discovery failed (HTTP {status})", "Model discovery failed: connection error or invalid upstream response"),
+    "ru": ("Получение моделей не поддерживается для этого провайдера", "Введите корректный HTTP(S) URL сервера", "URL или протокол изменён; введите API-ключ заново", "Ошибка получения моделей (HTTP {status})", "Ошибка получения моделей: нет соединения или неверный ответ сервера"),
+    "es": ("Este proveedor no admite el listado de modelos", "Introduce una URL HTTP(S) válida del servidor", "La URL o el protocolo ha cambiado; vuelve a introducir la clave API", "Error al obtener modelos del servidor (HTTP {status})", "Error al obtener modelos: conexión fallida o respuesta no válida"),
+    "pt": ("Este provedor não suporta a descoberta de modelos", "Digite uma URL HTTP(S) válida do servidor", "A URL ou o protocolo mudou; digite a chave de API novamente", "Falha ao obter modelos do servidor (HTTP {status})", "Falha ao obter modelos: erro de conexão ou resposta inválida"),
+}
+for _locale, _values in _DISCOVERY_MESSAGES.items():
+    _MESSAGES[_locale].update(zip(("discovery_unsupported", "discovery_url", "discovery_key_changed", "discovery_status", "discovery_failed"), _values))
+
+
 def translate(key: str, locale: str = "zh", **params: Any) -> str:
     locale = locale.split("-", 1)[0].lower()
     template = _MESSAGES.get(locale, _MESSAGES["zh"]).get(key) or _MESSAGES["zh"].get(key) or key

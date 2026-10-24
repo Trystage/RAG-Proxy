@@ -56,6 +56,10 @@ export default {
     errors: '错误数'
   },
   providers: {
+    fetchModels: '获取模型列表',
+    selectModel: '搜索并选择模型（仍可手动输入）',
+    noModels: '上游未返回模型',
+    ollamaHint: 'Ollama 原生接口，例如 http://127.0.0.1:11434；无需 API Key，也可填写代理密钥；支持 OpenAI 下游，不支持 Anthropic 下游。',
     add: '新增 {label}',
     baseUrl: 'Base URL',
     apiKey: 'API Key',

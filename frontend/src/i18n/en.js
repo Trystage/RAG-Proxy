@@ -56,6 +56,10 @@ export default {
     errors: 'Errors'
   },
   providers: {
+    fetchModels: 'Fetch models',
+    selectModel: 'Search and select a model (manual input is also allowed)',
+    noModels: 'The upstream returned no models',
+    ollamaHint: 'Native Ollama API, e.g. http://127.0.0.1:11434. No API key required; a proxy key is optional. Supports OpenAI downstream, not Anthropic.',
     add: 'Add {label}',
     baseUrl: 'Base URL',
     apiKey: 'API Key',

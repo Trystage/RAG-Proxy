@@ -51,10 +51,10 @@ async def run_pipeline(
     if upstream_cfg is None:
         raise ProviderError(f"模型 {model_name} 关联的 upstream 不存在")
     provider = state.get_llm(str(upstream_cfg.get("id", "")))
-    if provider.fmt != fmt:
+    if not provider.supports_format(fmt):
         raise FormatMismatchError(
             f"模型 {model_name} 的 upstream 类型为 {provider.fmt}，"
-            f"与请求格式 {fmt} 不匹配（本服务不做格式转换）"
+            f"不支持请求格式 {fmt}"
         )
 
     result = PipelineResult(

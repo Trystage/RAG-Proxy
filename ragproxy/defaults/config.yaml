@@ -11,7 +11,9 @@ api_key_auth: true
 api_keys: []
 
 # ---------- LLM Provider（即文档中的 upstreams）----------
-# type: openai | anthropic
+# type: openai | anthropic | ollama
+# Ollama 使用原生 /api/chat，仅适配 OpenAI 下游；base_url 如 http://127.0.0.1:11434。
+# model 可指定上游真实模型名（例如 qwen3:8b）；未指定时使用下游请求模型名。
 upstreams:
   - id: "deepseek"
     type: "openai"

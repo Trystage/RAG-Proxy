@@ -36,6 +36,11 @@ def write_config(request: Request, state: AppState, cfg: dict[str, Any]) -> None
             if isinstance(item, dict) and is_masked(item.get("api_key")):
                 old = disk_items.get(item.get("id")) or {}
                 if old.get("api_key") and not is_masked(old.get("api_key")):
+                    if (
+                        str(old.get("base_url", "")).strip().rstrip("/") != str(item.get("base_url", "")).strip().rstrip("/")
+                        or str(old.get("type", "openai")).lower() != str(item.get("type", "openai")).lower()
+                    ):
+                        raise HTTPException(status_code=400, detail=translate("discovery_key_changed", locale_from_request(request)))
                     item["api_key"] = old["api_key"]
                 else:
                     raise HTTPException(

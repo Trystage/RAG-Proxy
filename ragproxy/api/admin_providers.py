@@ -3,11 +3,13 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..providers.embedding import EmbeddingProvider
-from ..providers.llm import LLMProvider
+from ..providers.base import new_client
+from ..providers.llm import LLMProvider, models_endpoint, parse_model_ids
 from ..providers.reranker import ReRankerProvider
 from ..config import is_masked
 from ..i18n import locale_from_request, translate
@@ -31,6 +33,13 @@ def _section(request: Request, kind: str) -> str:
     return sec
 
 
+def _same_destination(old: dict, item: dict) -> bool:
+    return (
+        str(old.get("base_url", "")).strip().rstrip("/") == str(item.get("base_url", "")).strip().rstrip("/")
+        and str(old.get("type", "openai")).lower() == str(item.get("type", "openai")).lower()
+    )
+
+
 @router.get("/admin/providers/{kind}")
 async def list_providers(request: Request, kind: str):
     require_admin(request)
@@ -49,6 +58,53 @@ async def list_providers(request: Request, kind: str):
 
 class ProviderBody(BaseModel):
     item: dict[str, Any] = Field(default_factory=dict)
+
+
+class ModelDiscoveryBody(ProviderBody):
+    origin_id: str | None = None
+    provider_id: str | None = None
+
+
+@router.post("/admin/providers/{kind}/models")
+async def discover_models(request: Request, kind: str, body: ModelDiscoveryBody):
+    require_admin(request)
+    locale = locale_from_request(request)
+    sec = _section(request, kind)
+    item = dict(body.item)
+    fmt = str(item.get("type", "openai")).lower()
+    if not ((kind == "llm" and fmt in ("openai", "anthropic", "ollama")) or (kind == "embedding" and fmt == "openai")):
+        raise HTTPException(400, translate("discovery_unsupported", locale))
+    try:
+        endpoint = models_endpoint(str(item.get("base_url", "")), fmt)
+    except ValueError:
+        raise HTTPException(400, translate("discovery_url", locale))
+    key = item.get("api_key")
+    if is_masked(key):
+        items = get_state(request).config.raw().get(sec, []) or []
+        origin_id = body.origin_id or body.provider_id
+        old = next((p for p in items if p.get("id") == origin_id), None)
+        if not old or is_masked(old.get("api_key")) or not old.get("api_key"):
+            raise HTTPException(400, translate("masked_key_input", locale))
+        if not _same_destination(old, item):
+            raise HTTPException(400, translate("discovery_key_changed", locale))
+        key = old["api_key"]
+    headers = {}
+    if fmt == "anthropic":
+        headers = {"x-api-key": key or "", "anthropic-version": "2023-06-01"}
+    elif key:
+        headers["Authorization"] = f"Bearer {key}"
+    client = None
+    try:
+        client = new_client(endpoint, None, 30)
+        response = await client.get(endpoint, headers=headers)
+        if response.status_code >= 300:
+            raise HTTPException(502, translate("discovery_status", locale, status=response.status_code))
+        return {"items": [{"id": model} for model in parse_model_ids(response.json(), fmt)]}
+    except (httpx.HTTPError, ValueError, TypeError):
+        raise HTTPException(502, translate("discovery_failed", locale))
+    finally:
+        if client is not None:
+            await client.aclose()
 
 
 @router.post("/admin/providers/{kind}")
@@ -86,7 +142,6 @@ async def update_provider(request: Request, kind: str, provider_id: str, body: P
     old_key = items[idx].get("api_key")
     new_key = item.get("api_key")
     if is_masked(old_key):
-        # 旧值本身已是脱敏占位（历史污染）：必须用新值覆盖，且新值不能仍是脱敏占位
         if is_masked(new_key) or not new_key:
             raise HTTPException(
                 status_code=400,
@@ -94,12 +149,10 @@ async def update_provider(request: Request, kind: str, provider_id: str, body: P
             )
         item["api_key"] = new_key
     elif is_masked(new_key) or new_key in (None, ""):
-        # 前端回传脱敏占位（**** / sk-****xxx）或空值时保留原真实密钥，防止误覆盖
         if is_masked(new_key) and not old_key:
-            raise HTTPException(
-                status_code=400,
-                detail=translate("masked_key_input", locale_from_request(request)),
-            )
+            raise HTTPException(status_code=400, detail=translate("masked_key_input", locale_from_request(request)))
+        if old_key and not _same_destination(items[idx], item):
+            raise HTTPException(status_code=400, detail=translate("discovery_key_changed", locale_from_request(request)))
         item["api_key"] = old_key
     items[idx] = item
     save_section(request, state, sec, items)
@@ -130,6 +183,7 @@ async def test_provider(request: Request, kind: str, provider_id: str):
     if idx < 0:
         raise HTTPException(status_code=404, detail=translate("provider_not_found", locale_from_request(request)))
     cfg = items[idx]
+    provider = None
     try:
         if kind == "llm":
             provider = LLMProvider(cfg)
@@ -149,10 +203,11 @@ async def test_provider(request: Request, kind: str, provider_id: str):
             raw = str(result.get("message", ""))
             error = raw.split(":", 1)[1].strip() if ":" in raw else raw
             result["message"] = translate("test_failure", locale, error=error)
-        if hasattr(provider, "aclose"): 
-            await provider.aclose()
     except Exception as e:  # noqa: BLE001
         result = {"ok": False, "message": translate("test_exception", locale_from_request(request), error=e)}
+    finally:
+        if provider is not None and hasattr(provider, "aclose"):
+            await provider.aclose()
     return result
 
 

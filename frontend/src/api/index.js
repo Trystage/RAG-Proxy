@@ -36,4 +36,10 @@ export function createApiKey(payload) { return http.post('/admin/api/keys', payl
 export function updateApiKey(id, payload) { return http.put(`/admin/api/keys/${id}`, payload) }
 export function deleteApiKey(id) { return http.delete(`/admin/api/keys/${id}`) }
 
+export function discoverProviderModels(kind, item, originId) {
+  return http.post(`/admin/providers/${kind}/models`, { item, ...(originId ? { origin_id: originId } : {}) }, {
+    headers: { 'Accept-Language': localStorage.getItem('ragproxy_locale') || 'zh' }
+  })
+}
+
 export default http

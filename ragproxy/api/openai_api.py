@@ -27,7 +27,11 @@ router = APIRouter()
 
 class ChatMessage(BaseModel):
     role: str
-    content: Any
+    content: Any = None
+    tool_calls: list[dict[str, Any]] | None = None
+    tool_call_id: str | None = None
+    name: str | None = None
+    reasoning_content: str | None = None
 
 
 class ChatRequest(BaseModel):
