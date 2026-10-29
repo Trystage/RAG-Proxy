@@ -300,35 +300,65 @@ class ChromaHttpStore(BaseVectorStore):
     def __init__(self, cfg: dict[str, Any]):
         import httpx
 
-        self.base_url = str(cfg.get("base_url", "http://127.0.0.1:8000")).rstrip("/")
+        from urllib.parse import quote
+
+        self.base_url = str(cfg.get("base_url", "http://127.0.0.1:8000")).strip().rstrip("/")
+        try:
+            url = httpx.URL(self.base_url)
+        except httpx.InvalidURL as e:
+            raise ProviderError("Chroma base_url 无效：必须是包含主机的 http:// 或 https:// 地址") from e
+        if url.scheme not in ("http", "https") or not url.host or url.query or url.fragment:
+            raise ProviderError("Chroma base_url 无效：必须使用 http:// 或 https://，且不能包含查询参数或片段")
         self.tenant = str(cfg.get("tenant", "default_tenant"))
         self.database = str(cfg.get("database", "default_database"))
         self.prefix = str(cfg.get("collection_prefix", "ragproxy_"))
-        self._client = httpx.AsyncClient(timeout=30)
+        self._collections_path = (
+            f"api/v2/tenants/{quote(self.tenant, safe='')}/databases/"
+            f"{quote(self.database, safe='')}/collections"
+        )
+        self._client = httpx.AsyncClient(base_url=self.base_url + "/", timeout=30)
         self._col_ids: dict[str, str] = {}
 
-    async def _col_path(self, kb: str) -> str:
-        return f"/api/v1/tenants/{self.tenant}/databases/{self.database}/collections"
+    def _col_path(self, name_or_id: str) -> str:
+        from urllib.parse import quote
+
+        return f"{self._collections_path}/{quote(name_or_id, safe='')}"
+
+    async def _request(self, method: str, path: str, **kwargs):
+        import httpx
+
+        try:
+            resp = await self._client.request(method, path, **kwargs)
+            resp.raise_for_status()
+            return resp
+        except httpx.TimeoutException as e:
+            raise ProviderError("Chroma 服务超时") from e
+        except httpx.RequestError as e:
+            raise ProviderError("Chroma 服务连接失败，请检查 base_url 和服务状态") from e
+        except httpx.HTTPStatusError as e:
+            raise ProviderError(
+                f"Chroma 服务返回 HTTP {e.response.status_code}",
+                status_code=e.response.status_code,
+            ) from e
 
     async def _ensure_col(self, kb: str) -> str:
         col_name = self.prefix + kb
         if col_name in self._col_ids:
             return self._col_ids[col_name]
-        path = await self._col_path(kb)
-        resp = await self._client.get(path)
-        resp.raise_for_status()
-        for c in resp.json():
-            if c.get("name") == col_name:
-                self._col_ids[col_name] = c["id"]
-                return c["id"]
-        resp = await self._client.post(
-            path,
-            json={
-                "name": col_name,
-                "configuration": {"hnsw_configuration": {"space": "cosine"}},
-            },
-        )
-        resp.raise_for_status()
+        try:
+            resp = await self._request("GET", self._col_path(col_name))
+        except ProviderError as e:
+            if e.status_code != 404:
+                raise
+            resp = await self._request(
+                "POST",
+                self._collections_path,
+                json={
+                    "name": col_name,
+                    "configuration": {"hnsw": {"space": "cosine"}},
+                    "get_or_create": True,
+                },
+            )
         cid = resp.json()["id"]
         self._col_ids[col_name] = cid
         return cid
@@ -337,62 +367,80 @@ class ChromaHttpStore(BaseVectorStore):
         await self._ensure_col(kb_name)
 
     async def delete_kb(self, kb_name: str) -> None:
-        cid = await self._ensure_col(kb_name)
-        resp = await self._client.delete(f"/api/v1/collections/{cid}")
-        resp.raise_for_status()
-        self._col_ids.pop(self.prefix + kb_name, None)
+        col_name = self.prefix + kb_name
+        try:
+            await self._request("DELETE", self._col_path(col_name))
+        except ProviderError as e:
+            if e.status_code != 404:
+                raise
+        self._col_ids.pop(col_name, None)
 
     async def list_kbs(self) -> list[dict[str, Any]]:
-        resp = await self._client.get(
-            f"/api/v1/tenants/{self.tenant}/databases/{self.database}/collections"
-        )
-        resp.raise_for_status()
         out = []
-        for c in resp.json():
-            name = c.get("name", "")
-            if name.startswith(self.prefix):
-                out.append({"name": name[len(self.prefix) :], "chunks": c.get("count", 0)})
+        offset = 0
+        limit = 100
+        while True:
+            resp = await self._request(
+                "GET", self._collections_path, params={"limit": limit, "offset": offset}
+            )
+            collections = resp.json()
+            for c in collections:
+                name = c.get("name", "")
+                if name.startswith(self.prefix):
+                    count_resp = await self._request("GET", self._col_path(c["id"]) + "/count")
+                    out.append({"name": name[len(self.prefix) :], "chunks": int(count_resp.json())})
+            if len(collections) < limit:
+                break
+            offset += len(collections)
         return out
 
     async def count(self, kb_name: str) -> int:
         cid = await self._ensure_col(kb_name)
-        resp = await self._client.get(f"/api/v1/collections/{cid}")
-        resp.raise_for_status()
-        return int(resp.json().get("count", 0))
+        resp = await self._request("GET", self._col_path(cid) + "/count")
+        return int(resp.json())
+
+    async def dim(self, kb_name: str) -> int:
+        await self._ensure_col(kb_name)
+        resp = await self._request("GET", self._col_path(self.prefix + kb_name))
+        return int(resp.json().get("dimension") or 0)
 
     async def add(self, kb_name: str, items: list[dict], embeddings: list[list[float]]) -> None:
+        if len(items) != len(embeddings):
+            raise VectorStoreError("items 与 embeddings 数量不一致")
+        if not items:
+            return
         cid = await self._ensure_col(kb_name)
-        resp = await self._client.post(
-            f"/api/v1/collections/{cid}/add",
+        await self._request(
+            "POST", self._col_path(cid) + "/add",
             json={
                 "ids": [it["id"] for it in items],
                 "embeddings": embeddings,
                 "documents": [it["text"] for it in items],
                 "metadatas": [
                     {
+                        **(it.get("metadata") or {}),
                         "file_id": it.get("file_id", ""),
                         "file_name": it.get("file_name", ""),
-                        **(it.get("metadata") or {}),
                     }
                     for it in items
                 ],
             },
         )
-        resp.raise_for_status()
 
     async def query(
         self, kb_name: str, query_vector: list[float], top_k: int, score_threshold: float
     ) -> list[dict[str, Any]]:
+        if top_k <= 0:
+            return []
         cid = await self._ensure_col(kb_name)
-        resp = await self._client.post(
-            f"/api/v1/collections/{cid}/query",
+        resp = await self._request(
+            "POST", self._col_path(cid) + "/query",
             json={
                 "query_embeddings": [query_vector],
                 "n_results": top_k,
                 "include": ["documents", "metadatas", "distances"],
             },
         )
-        resp.raise_for_status()
         data = resp.json()
         out: list[dict[str, Any]] = []
         ids = data.get("ids", [[]])[0]
@@ -401,7 +449,7 @@ class ChromaHttpStore(BaseVectorStore):
         dists = data.get("distances", [[]])[0]
         for i, did in enumerate(ids):
             dist = float(dists[i])
-            sim = 1.0 / (1.0 + max(dist, 0.0))
+            sim = 1.0 - dist
             if sim < score_threshold:
                 continue
             meta = metas[i] or {}
@@ -418,12 +466,61 @@ class ChromaHttpStore(BaseVectorStore):
         return out
 
     async def delete_documents(self, kb_name: str, file_ids: list[str]) -> None:
+        if not file_ids:
+            return
         cid = await self._ensure_col(kb_name)
-        resp = await self._client.post(
-            f"/api/v1/collections/{cid}/delete",
+        await self._request(
+            "POST", self._col_path(cid) + "/delete",
             json={"where": {"file_id": {"$in": file_ids}}},
         )
-        resp.raise_for_status()
+
+    async def _get_chunks(self, kb_name: str, file_id: str | None = None) -> list[dict]:
+        cid = await self._ensure_col(kb_name)
+        chunks = []
+        limit = 1000
+        offset = 0
+        while True:
+            payload = {"limit": limit, "offset": offset, "include": ["documents", "metadatas"]}
+            if file_id is not None:
+                payload["where"] = {"file_id": file_id}
+            resp = await self._request("POST", self._col_path(cid) + "/get", json=payload)
+            data = resp.json()
+            ids = data["ids"]
+            docs = data.get("documents") or [""] * len(ids)
+            metas = data.get("metadatas") or [None] * len(ids)
+            for i, did in enumerate(ids):
+                meta = metas[i] or {}
+                chunks.append({
+                    "id": did,
+                    "text": docs[i] or "",
+                    "file_id": meta.get("file_id"),
+                    "file_name": meta.get("file_name", ""),
+                    "metadata": meta,
+                })
+            if len(ids) < limit:
+                break
+            offset += len(ids)
+        return chunks
+
+    async def documents(self, kb_name: str) -> list[dict]:
+        by_file: dict[str, dict] = {}
+        for chunk in await self._get_chunks(kb_name):
+            fid = chunk["file_id"]
+            if not fid:
+                continue
+            if fid not in by_file:
+                by_file[fid] = {
+                    "file_id": fid, "file_name": chunk["file_name"],
+                    "chunks": 0, "status": "indexed", "indexed_at": "",
+                }
+            by_file[fid]["chunks"] += 1
+        return list(by_file.values())
+
+    async def chunks_of_file(self, kb_name: str, file_id: str, page: int = 1, size: int = 20) -> dict:
+        chunks = await self._get_chunks(kb_name, file_id)
+        chunks.sort(key=lambda c: c["metadata"].get("chunk_index", 0))
+        start = (page - 1) * size
+        return {"total": len(chunks), "page": page, "size": size, "chunks": chunks[start : start + size]}
 
 
 def build_vectorstore(cfg: dict[str, Any], data_dir: Path) -> BaseVectorStore:
